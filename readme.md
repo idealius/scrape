@@ -1,5 +1,8 @@
 I wasn't able to find a free, crawling, website scraping utility online, so I made one in python.
 
+(Edit: looks like there are some free tools out there that scrape, though quite a bit more complicated than my project - Selenium integration, etc. - wish this article was posted 6 months ago! :)
+https://blog.apify.com/top-11-open-source-web-crawlers-and-one-powerful-web-scraper/
+
 This program does not use the sitemap at all, except to consider it another page to grab links from if an HTML version of it exists in the hierarchy of the HTML pages, themselves. I don't find sitemaps to be particularly compelling for a starting point to scrape, but it might be good to check a site's sitemap to understand what folders to look at and input into this program.
 
 I don't think it acts as competition to many of the fee-based scraping tools, as when I demo'd them they were easy to use, easy to browse, easy to convert. This project is none of those things. However, if you're willing to spend a little time on setting it up and deal with the inconvenience of editing the python file directly with your latest cookie and such, and accept its output is one giant JSON file, it should work well!
