@@ -19,7 +19,7 @@ Some pages cannot be crawled with this. It could be because they have detection 
 
 How to crawl:
 
-Get the editthiscookie extension from chrome extension store
+Get the ```editthiscookie``` extension from chrome extension store
 Navigate to the site you want to scrape
 Click its icon in the upper right after ensuring its pinned in your managed extensions
 Click export
