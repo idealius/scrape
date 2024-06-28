@@ -82,10 +82,12 @@ If you decide to start crawling a new website recommend you backup the all_page_
 
 Then delete files matching something like this pattern (basically any recent files created or modified since you last ran scrape.py), and modify scrape.py with a new cookie, new my_start_page, and new allow_list url's for your new scraping project.
 
-```all_page_data*.json
+```
+all_page_data*.json
 urls_crawled*.json
 urls_problematic.json
 urls_queue*.json
-data*.json```
+data*.json
+```
 
-Use for commercial reasons or use for private reasons at your own risk keeping in mind the licenses of the imported libraries (Beautiful Soup, colorama, etc.)
+Use for commercial reasons or use for private reasons at your own risk keeping in mind the licenses of the imported libraries (Beautiful Soup, colorama, amcharts5 etc.)
