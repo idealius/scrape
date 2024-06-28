@@ -1,9 +1,13 @@
+#Intro
+
 I wasn't able to find a free, crawling, website scraping utility online, so I made one in python.
 
 (Edit: looks like there are some free tools out there that scrape, though quite a bit more complicated than my project - Selenium integration, etc. - wish this article was posted 6 months ago! :)
 https://blog.apify.com/top-11-open-source-web-crawlers-and-one-powerful-web-scraper/
 
 This program does not use the sitemap at all, except to consider it another page to grab links from if an HTML version of it exists in the hierarchy of the HTML pages, themselves. I don't find sitemaps to be particularly compelling for a starting point to scrape, but it might be good to check a site's sitemap to understand what folders to look at and input into this program.
+
+#Output
 
 The JSON output looks something like this, though it also has the main domain content parallel with the first level of folders for the domain:
 
@@ -50,6 +54,13 @@ The JSON output looks something like this, though it also has the main domain co
         },
 ```
 
+For the JSON file itself: The JSON structure has the text_content as the main page text. The rest is probably a little too much, but there seemed no real reason to leave out the extra page information gathered by beautiful soup - the python library used to process the page.
+
+Within text_content consecutive line feeds or '\n' 's are cut down to two, the same with whitespace. BeautifulSoup doesn't return the raw HTML, it returns mostly text.
+
+
+#Details
+
 I don't think it acts as competition to many of the fee-based scraping tools, as when I demo'd them they were easy to use, easy to browse, easy to convert. This project is none of those things. However, if you're willing to spend a little time on setting it up and deal with the inconvenience of editing the python file directly with your latest cookie and such, and accept its output is one giant JSON file, it should work well!
 
 I made this about 6 months ago to crawl a private knowledgebase I had access to then convert them to one giant JSON file which mirrors the URL structure of the site in the JSON node structure. I did this because I was considering plugging it into AI or at least giving me more options to search said database. I'm just now uploading as I had to remove much of the identifying information from that database and make it more generic. I never was sure I was going to put a public version of it so its a bit user unfriendly, but it has nice options, and is pretty much failsafe regardless how the website is structured. It also will save the data it has crawled so far every 10 minutes. If you're worried about hitting the target website too often you can change the ```time.sleep(1)``` (seconds) to add a delay between requests. Because I made this 6 months ago I'm not sure exactly all the information regarding it, but I did my best before publishing it. I am fairly certain it will work on linux, but I never tested it. I do believe the libraries imported into python are all cross platform.
@@ -58,18 +69,16 @@ For some reasona a NoneType error will happen rarely when starting scraping a ne
 
 The command line / terminal output is pretty mesmerizing if I do say so myself with useful information about what it's accessing. The BL urls list (red text) is good to understand how many pages will be in your all_page_data.json file when it exits.
 
-Be careful with this program as if the website is very large it may just crawl the entire thing. There are exceptions where depth could surpass how it works recursively (actually not that difficult to modify) but websites tend to be flat and have multiple links to the same page throughout their structure so getting too much is likely to be more of a problem than getting too little. That said it is good at not duplicating data.
+Be careful with this program as if the website is very large it may just crawl the entire thing. There are exceptions where depth could surpass how it works recursively (actually not that difficult to modify) but websites tend to be flat and have multiple links to the same page throughout their structure so getting too much is likely to be more of a problem than getting too little. That said it is good at not duplicating data. The depth is set to 15 by default, but the depth reported from the terminal output is more the chain as in it doesn't think of depth as a result of the folder structure of the website, but the link in its chain. It will process all unprocessed links on a particular page before it reduces the depth variable, but it will also process all the pages on the links for the page it's processing from that page... so it basically goes on a treasure hunt and all the depths get resolved as more and more URL's are processed near the end of the crawl. This isn't the best algorithm but it is certainly easy to implement and it should process just as fast as any other single thread crawler.
+
+Some pages cannot be crawled with this. It could be because they have detection for this type of stuff. I did not try to get around it, but your mileage may vary. For example this does not work to scrape https://news.google.com.
+
+#Viewer
 
 There is even a somewhat prototype search page for the JSON file with ```scrape.html```. It has an amcharts integration trying to show the node structure of the JSON file graphically, but to be honest most websites url structure is super flat so it's not all that useful.
 You'll have to disable CORS in Chrome somehow. (E.g. To use it to load a local file in Chrome you'll have to do something like windows key + r > paste ```chrome.exe --user-data-dir="C://Chrome dev session" --disable-web-security``` then copy and paste the local file (e.g. ```C:\stuff\scrape\scrape.html```) into the address bar of Chrome.
 
-For the JSON file itself: The JSON structure has the text_content as the main page text. The rest is probably a little too much, but there seemed no real reason to leave out the extra page information gathered by beautiful soup - the python library used to process the page.
-
-Within text_content consecutive line feeds or '\n' 's are cut down to two, the same with whitespace.
-
-Some pages cannot be crawled with this. It could be because they have detection for this type of stuff. I did not try to get around it, but your mileage may vary. For example this does not work to scrape https://news.google.com.
-
-How to crawl:
+#How-to
 
 Get the ```editthiscookie``` extension from chrome extension store
 Navigate to the site you want to scrape
@@ -127,6 +136,8 @@ one simply performs ```pip3 install requests``` and repeats as necessary.
 Hit Esc to end the crawl.
 
 Running it again resumes where it left off.
+
+#Starting a new crawl
 
 If you decide to start crawling a new website recommend you backup the all_page_data.json as your extracted database from your current scraping project...
 
