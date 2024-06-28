@@ -5,6 +5,51 @@ https://blog.apify.com/top-11-open-source-web-crawlers-and-one-powerful-web-scra
 
 This program does not use the sitemap at all, except to consider it another page to grab links from if an HTML version of it exists in the hierarchy of the HTML pages, themselves. I don't find sitemaps to be particularly compelling for a starting point to scrape, but it might be good to check a site's sitemap to understand what folders to look at and input into this program.
 
+The JSON output looks something like this, though it also has the main domain content parallel with the first level of folders for the domain:
+
+```
+{
+    "name": "https://www.nationalgeographic.com/",
+    "children": [
+        {
+            "name": "topic",
+            "path": "topic",
+            "children": [
+                {
+                    "name": "topic/careers",
+                    "path": "topic/careers",
+                    "children": [
+                        {
+                            "name": "Careers at National Geographic",
+                            "meta_tags": {
+                                ...
+                            },
+                            "text_content": "\n\nCareers at National Geographic\n\nSkip to contentNewslettersSubscribeMenuCareers at National GeographicNational Geographic was founded in 1888 by a group of visionaries who embodied an era of exploration, discovery, invention, and change. With offices around the world and headquarters in Washington, D.C., we offer a unique opportunity to be part of a world-class institution with a strong global brand and a rich history. Explore our open positions now.A career with us means working hard to achieve our mission in a collaborative and inclusive culture. We have a talented team with diverse people, ideas, interests, and ...",
+                            "url": "https://www.nationalgeographic.com/pages/topic/careers",
+                            "value": 1,
+                            "path": "pages/topic/careers",
+                            "children": [],
+                            "crawled": true,
+                            "links": [
+                                "https://www.nationalgeographic.com/newsletters/signup",
+                                ...
+                            ],
+                            "branch": false
+                        }
+                    ],
+                    "value": 1,
+                    "crawled": false,
+                    "url": "https://www.nationalgeographic.com/topic/careers",
+                    "branch": true
+                }
+            ],
+            "value": 0,
+            "crawled": false,
+            "url": "https://www.nationalgeographic.com/topic",
+            "branch": true
+        },
+```
+
 I don't think it acts as competition to many of the fee-based scraping tools, as when I demo'd them they were easy to use, easy to browse, easy to convert. This project is none of those things. However, if you're willing to spend a little time on setting it up and deal with the inconvenience of editing the python file directly with your latest cookie and such, and accept its output is one giant JSON file, it should work well!
 
 I made this about 6 months ago to crawl a private knowledgebase I had access to then convert them to one giant JSON file which mirrors the URL structure of the site in the JSON node structure. I did this because I was considering plugging it into AI or at least giving me more options to search said database. I'm just now uploading as I had to remove much of the identifying information from that database and make it more generic. I never was sure I was going to put a public version of it so its a bit user unfriendly, but it has nice options, and is pretty much failsafe regardless how the website is structured. It also will save the data it has crawled so far every 10 minutes. If you're worried about hitting the target website too often you can change the ```time.sleep(1)``` (seconds) to add a delay between requests. Because I made this 6 months ago I'm not sure exactly all the information regarding it, but I did my best before publishing it. I am fairly certain it will work on linux, but I never tested it. I do believe the libraries imported into python are all cross platform.
