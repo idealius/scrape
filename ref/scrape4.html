@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagram</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="scrape.css" />
+    <!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .container {
+            display: flex;
+        }
+        /* #chartdiv {
+            flex: 1;
+            height: 600px;
+        } */
+        .search-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+        #searchInput {
+            margin-bottom: 10px;
+            width: 260px;
+        }
+        #searchButton {
+            width: 130px; /* Set the width of the search button */
+        }
+        #searchResults {
+            flex: 1;
+        }
+
+        .highlighted {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg id="chartdiv"></svg>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search..." >
+            <button id="searchButton">Search</button>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+</body>
+</html>
+<html>
+    <script>
+        
+        // Set up the SVG dimensions
+        const width = 600;
+        const height = 600;
+
+        // Create an SVG container
+        // const svg = d3.select(".container > svg")
+        //     .attr("width", width)
+        //     .attr("height", height);
+        var svg = d3.select(".container > svg"),
+            inner = svg.append("g");
+        
+        // Create a tree layout
+        const tree = d3.tree()
+            .size([width, height])
+            .separation((a, b) => (a.parent == b.parent ? 25 : 50) / a.depth);
+        
+        function zoom() {
+            inner.attr("transform", "translate(" + d3.zoom.translate() + ")scale(" + zoom.scale() + ")");
+        }
+        //  .attr("transform", "translate(0, 0)"); // Set an initial transform
+
+        // svg.call(zoom.transform, d3.zoomIdentity);
+        svg.call(zoom)
+            
+
+        svg.on("wheel.zoom", (event) => {
+            event.preventDefault();
+            const delta = event.deltaY > 0 ? 1.1 : 0.9; // Adjust the zoom speed as needed
+            const scale = d3.zoomTransform(svg.node()).k * delta;
+            svg.call(zoom.transform, d3.zoomIdentity.scale(scale));
+        });
+        ;
+
+            d3.json("all_page_data.json").then(data => { //<---------------
+        // Create a root node from the loaded data
+        const root = d3.hierarchy(data);
+
+        // Generate tree layout
+        tree(root);
+
+        // Create links (edges)
+        const links = root.links();
+
+        // Create a group for the tree elements
+        
+
+        // Create links
+        g.selectAll(".link")
+            .data(links)
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("d", d => {
+            return `M${d.source.x},${d.source.y} L${d.target.x},${d.target.y}`;
+            });
+
+        // Create nodes (circles)
+        const nodes = g.selectAll(".node")
+            .data(root.descendants())
+            .enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        nodes.append("circle")
+            .attr("r", 4);
+
+        // nodes.append("text")
+        //     .attr("dy", "-1em")
+        //     .text(d => d.data.name);
+
+        nodes.append("text")
+            .attr("dy", "0.31em")
+            .attr("x", 10) // Adjust the position
+            .attr("text-anchor", "start")
+            .attr("transform", "rotate(90)") // Rotate the text
+            .text(d => d.data.name);
+    
+        
+        console.log(root)
+        // Make sure you set the initial zoom level as needed
+        
+
+        var searchButton = document.getElementById("searchButton");
+
+        searchButton.addEventListener("click", function (event) {
+            // search(series.dataItems.dataContext)
+            search(root)
+            event.preventDefault()
+        });
+        
+        var searchInput = document.getElementById("searchInput");
+
+        searchInput.addEventListener("keydown", function(event) {
+            
+            if (event.key === "Enter") {
+                // The Enter key was pressed
+
+                search(root);
+                // search(series.dataItems.dataContext)
+                event.preventDefault()
+            }
+        });
+
+        
+        function extractContextAroundIndex(text, index, maxLength) {
+            const start = Math.max(0, index - maxLength);
+            const end = Math.min(text.length, index + maxLength + 1);
+            return text.substring(start, end);
+        }
+
+        function highlightText(text, target) {
+            const content = target;
+            const regex = new RegExp(`(${text})`, 'gi');
+            my_content = content.replace(regex, '<span class="highlighted">$1</span>');
+            if (my_content != -1) {
+                return my_content
+            }
+            else {
+                return text
+            }
+        }
+
+        function bfsSearch(node, query) {
+            var queue = [];
+            var results = [];
+
+            queue.push({ node: node });
+            while (queue.length > 0) {
+                var current = queue.shift();
+                var currentNode = current.node;
+                var currentContext = current.context;
+                
+
+                
+                if (currentNode) {
+                    // console.log("Searching.." + currentUrl)
+                    
+                    if (currentNode.data.text_content) {
+                        // console.log("Ahoy, text content. \n" + currentNode.text_content)
+                        
+                        my_text_content = currentNode.data.text_content.replace(/_/g, " ").toLowerCase()
+                        my_query = query.replace(/"/g, "").toLowerCase()
+                        ind = my_text_content.indexOf(my_query)
+                        // print (ind, my_text_content.length)
+                        
+                        if (ind != -1) {
+                            
+                            my_highlight = highlightText(query, extractContextAroundIndex(currentNode.data.text_content, ind, 120));
+                            // currentNode.isActive = true
+                            results.push({ node: currentNode, context: my_highlight});
+
+                            console.log("Found one.")
+                        }
+                    }
+
+                    if (currentNode.children) {
+                        // console.log(currentNode.children.length + " kids.")
+                        for (var i = 0; i < currentNode.children.length; i++) {
+                            // if (currentNode.children[i].children)
+                            // console.log("Index: " + i)
+                            var child = currentNode.children[i];
+                            queue.push({ node: child, context: ""});
+                        }
+                        // console.log("Still Searching..")
+                    }
+                }
+            }
+            console.log("Finished Searching.")
+            return results;
+        }
+
+
+        function search(myseries) {
+            var query = document.getElementById("searchInput").value;
+            var results = [];
+            // console.log("Series")
+            // console.log(myseries)
+            results = bfsSearch(myseries, query);
+            // console.log(results[0])
+            // console.log(results[1])
+            if (results.length > 0) {
+                var searchResultsHTML = "";
+                for (var i = 0; i < results.length; i++) {
+                    var result = results[i];
+                    if (result && result.node.data.url) {
+                        searchResultsHTML += "<p><a href='" + result.node.data.url + "'>" + result.node.data.name + "</a></p>";
+                        if (result.context) {
+                            // Add line breaks for spacing
+                            searchResultsHTML += result.context;
+                            searchResultsHTML += "<br><br>";
+                        }
+                        console.log("Updating result..");
+                    }
+                }
+                document.getElementById("searchResults").innerHTML = searchResultsHTML;
+            } else {
+                document.getElementById("searchResults").innerHTML = "<p>No results found.</p>";
+            }
+
+            console.log("Search results should be displayed.")
+        }
+      
+    })
+    
+
+
+    </script>
+
+</html>

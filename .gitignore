@@ -1,0 +1,3 @@
+# Ignore all files and folders starting with the specified names
+*.json
+scrape_.py

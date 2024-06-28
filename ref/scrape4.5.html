@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagram</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="scrape.css" />
+    <style>
+        .container {
+            display: flex;
+        }
+        .search-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+        #searchInput {
+            margin-bottom: 10px;
+            width: 260px;
+        }
+        #chartdiv {
+            flex: 1;
+            height: 600px;
+        }
+        #searchButton {
+            width: 130px;
+        }
+        #searchResults {
+            flex: 1;
+        }
+        .highlighted {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg id="chartdiv"></svg>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search...">
+            <button id="searchButton">Search</button>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+    <script>
+        const width = 800;
+        const height = 600;
+        const zoomSpeed = 1; // Adjust the zoom speed factor as needed
+        const panSpeed = 1;   // Adjust the pan speed factor as needed
+        const circleRadius = 7; // Adjust the radius as needed
+
+        let root;
+
+        const svg = d3.select("#chartdiv")
+            .attr("width", width)
+            .attr("height", height);
+
+        let zoom = d3.zoom()
+            .scaleExtent([-5, 5])
+            .translateExtent([[0, 0], [width, height]])
+            .on('zoom', handleZoom);
+
+        const g = svg.append("g");
+
+        // Function to handle zooming
+        function handleZoom(e) {
+            svg.attr('transform', e.transform);
+
+            // Zoom
+            g.selectAll(".link")
+                .attr("d", d => `M${d.source.x * e.transform.k * zoomSpeed},${d.source.y * e.transform.k * zoomSpeed} L${d.target.x * e.transform.k * zoomSpeed},${d.target.y * e.transform.k * zoomSpeed}`);
+
+            // Pan
+            g.selectAll(".node")
+                .attr("transform", d => `translate(${d.x * e.transform.k},${d.y * e.transform.k}`);
+        }
+
+        // Load your JSON data and create the tree
+        d3.json("all_page_data_s.json").then(data => {
+            root = d3.hierarchy(data);
+
+            // Create a tree layout
+            const tree = d3.tree()
+                .size([height, width])
+                .separation((a, b) => (a.parent == b.parent ? 300 : 300) / a.depth);
+
+            // Generate tree layout
+            tree(root);
+
+            // Create links (edges)
+            const links = root.links();
+
+            // Create links
+            svg.selectAll(".link")
+                .data(links)
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d => `M${d.source.x},${d.source.y} L${d.target.x},${d.target.y}`)
+                .style("stroke", "grey")
+                .style("stroke-width", 1);
+
+            // Create nodes (circles and text)
+            const nodes = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            nodes.append("circle")
+                .attr("r", 10);
+
+            nodes.append("text")
+                .attr("dy", ".31em")
+                .attr("x", 10)
+                .attr("text-anchor", "start")
+                .style("font-size", "15px")
+                .attr("transform", "rotate(-90)")
+                .append("textPath")
+                .attr("xlink:href", (d, i) => `#textpath-${i}`)
+                .text(d => {
+                    const my_name = d.data.name.split('/').pop();
+                    return my_name;
+                });
+
+            // Create an array of rotation angles from 1 to 361 in steps of 10 degrees
+            const rotationAngles = Array.from({ length: 37 }, (_, i) => i * 10);
+
+            // Initialize variables to keep track of the widest text and its associated rotation angle
+            let maxWidth = 0;
+            let widestRotationAngle = 0;
+
+            // Loop through the text elements to find the widest text and rotation angle
+            nodes.selectAll("textPath").each(function(d, i) {
+                return 
+                // const textElement = this;
+                // const textWidth = measureTextWidth(textElement, d.data.name);
+                // if (textWidth > maxWidth) {
+                //     maxWidth = textWidth;
+                //     widestRotationAngle = i * 10;
+                // }
+            });
+
+            console.log(`Widest angle is ${widestRotationAngle} degrees with a text width of ${maxWidth}.`);
+
+            // Update the text elements to follow a circular path for each rotation angle
+            nodes.selectAll("textPath").attr("startOffset", "50%")
+                .attr("method", "stretch")
+                .attr("spacing", "auto")
+                .attr("text-anchor", "middle");
+
+            // textElements.attr("transform", `rotate(${widestRotationAngle}, 0, 0)`);
+
+            nodes.append("defs").html(function(d, i) {
+                const radius = d3.select(this.parentNode).select("circle").attr("r") + 10;
+                return `<path id="textpath-${i}" d="M0 ${-radius} a${radius} ${radius} 0 1,1 0 ${2 * radius}"/>`;
+            });
+
+            ///<------------------------------Search Code v----------------------------------->
+
+            var searchButton = document.getElementById("searchButton");
+
+            searchButton.addEventListener("click", function (event) {
+                search(root);
+                event.preventDefault();
+            });
+
+            var searchInput = document.getElementById("searchInput");
+
+            searchInput.addEventListener("keydown", function(event) {
+                if (event.key === "Enter") {
+                    search(root);
+                    event.preventDefault();
+                }
+            });
+
+            function extractContextAroundIndex(text, index, maxLength) {
+                const start = Math.max(0, index - maxLength);
+                const end = Math.min(text.length, index + maxLength + 1);
+                return text.substring(start, end);
+            }
+
+            function highlightText(text, target) {
+                const content = target;
+                const regex = new RegExp(`(${text})`, 'gi');
+                my_content = content.replace(regex, '<span class="highlighted">$1</span>');
+                if (my_content != -1) {
+                    return my_content;
+                } else {
+                    return text;
+                }
+            }
+
+            function bfsSearch(node, query, svg) {
+                var queue = [];
+                var results = [];
+
+                queue.push({ node: node });
+                while (queue.length > 0) {
+                    var current = queue.shift();
+                    var currentNode = current.node;
+
+                    if (currentNode) {
+                        if (currentNode.data.text_content) {
+                            my_text_content = currentNode.data.text_content.replace(/_/g, " ").toLowerCase();
+                            my_query = query.replace(/"/g, "").toLowerCase();
+                            ind = my_text_content.indexOf(my_query);
+                            if (ind != -1) {
+                                my_highlight = highlightText(query, extractContextAroundIndex(currentNode.data.text_content, ind, 120));
+                                results.push({ node: currentNode, context: my_highlight });
+                                selectedNode = d3.select(`.node[data-name="${currentNode.data.name}"]`);
+                                selectedNode.select("circle")
+                                    .style("fill", "green")
+                                    .attr("r", 10);
+                            }
+                        }
+
+                        if (currentNode.children) {
+                            for (var i = 0; i < currentNode.children.length; i++) {
+                                var child = currentNode.children[i];
+                                queue.push({ node: child, context: "" });
+                            }
+                        }
+                    }
+                }
+                return results;
+            }
+
+            function search(myseries) {
+                var query = document.getElementById("searchInput").value;
+                var results = [];
+                results = bfsSearch(myseries, query);
+                if (results.length > 0) {
+                    var searchResultsHTML = "";
+                    for (var i = 0; i < results.length; i++) {
+                        var result = results[i];
+                        if (result && result.node.data.url) {
+                            searchResultsHTML += "<p><a href='" + result.node.data.url + "'>" + result.node.data.name + "</a></p>";
+                            if (result.context) {
+                                searchResultsHTML += result.context;
+                                searchResultsHTML += "<br><br>";
+                            }
+                        }
+                    }
+                    document.getElementById("searchResults").innerHTML = searchResultsHTML;
+                } else {
+                    document.getElementById("searchResults").innerHTML = "<p>No results found.</p>";
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AmCharts Voronoi Treemap</title>
+    <script src="amcharts5/index.js"></script>
+    <!-- <script src="amcharts5/xy.js"></script> -->
+    <script src="amcharts5/hierarchy.js"></script>
+    <script src="amcharts5/themes/Animated.js"></script>
+    <link rel="stylesheet" type="text/css" href="scrape.css" />
+    <!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .container {
+            display: flex;
+        }
+        #chartdiv {
+            flex: 1;
+            height: 600px;
+        }
+        .search-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+        #searchInput {
+            margin-bottom: 10px;
+            width: 260px;
+        }
+        #searchButton {
+            width: 130px; /* Set the width of the search button */
+        }
+        #searchResults {
+            flex: 1;
+        }
+
+        .highlighted {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="chartdiv"></div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search..." >
+            <button id="searchButton">Search</button>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+</body>
+</html>
+<html>
+    <script>
+        // Create root element
+        var root = am5.Root.new("chartdiv");
+
+        // Set themes
+        root.setThemes([
+            am5themes_Animated.new(root)
+        ]);
+
+
+        
+        // Create wrapper container
+        var container = root.container.children.push(am5.Container.new(root, {
+            width: am5.percent(100),
+            height: am5.percent(100),
+            layout: root.verticalLayout
+        }));
+
+        var series = container.children.push(am5hierarchy.Sunburst.new(root, {
+            singleBranchOnly: true,
+            downDepth: 10,
+            initialDepth: 10,
+            topDepth: 1,
+            innerRadius:am5.percent(30),
+            valueField: "value",
+            categoryField: "name",
+            childDataField: "children"
+        }));
+
+        // var series = container.children.push(am5hierarchy.Tree.new(root, {
+        //     // tooltip: am5.Tooltip.new(root, {
+        //     //     labelText: "[bold]{name}[/]\n{value}"
+        //     // }),
+        //     singleBranchOnly: true,
+        //     downDepth: 1,
+        //     initialDepth: 1,
+        //     // text_content: "text_content",
+        //     valueField: "value",
+        //     categoryField: "name",
+        //     childDataField: "children"
+        // }));
+
+        var searchButton = document.getElementById("searchButton");
+
+        searchButton.addEventListener("click", function (event) {
+            // search(series.dataItems.dataContext)
+            search(series._dataItems[0].dataContext)
+            event.preventDefault()
+        });
+        
+        var searchInput = document.getElementById("searchInput");
+
+        searchInput.addEventListener("keydown", function(event) {
+            
+            if (event.key === "Enter") {
+                // The Enter key was pressed
+
+                search(series._dataItems[0].dataContext);
+                // search(series.dataItems.dataContext)
+                event.preventDefault()
+            }
+        });
+        
+        console.log(series.data)
+        // am5.net.load("all_page_data_2023101703.json").then(function(result) {
+        am5.net.load("all_page_data.json").then(function(result) {
+            data = am5.JSONParser.parse(result.response)
+            res = series.data.setAll([data]);
+            console.log(data)
+
+            
+        }).catch(function(result) {
+            // This gets executed if there was an error loading URL
+            // ... handle error
+            console.log("Error loading " + result.xhr.responseURL);
+        });
+        
+        function extractContextAroundIndex(text, index, maxLength) {
+            const start = Math.max(0, index - maxLength);
+            const end = Math.min(text.length, index + maxLength + 1);
+            return text.substring(start, end);
+        }
+
+        function highlightText(text, target) {
+            const content = target;
+            const regex = new RegExp(`(${text})`, 'gi');
+            my_content = content.replace(regex, '<span class="highlighted">$1</span>');
+            if (my_content != -1) {
+                return my_content
+            }
+            else {
+                return text
+            }
+        }
+
+        function bfsSearch(node, query) {
+            var queue = [];
+            var results = [];
+
+            queue.push({ node: node });
+            while (queue.length > 0) {
+                var current = queue.shift();
+                var currentNode = current.node;
+                var currentContext = current.context;
+                
+
+                
+                if (currentNode) {
+                    // console.log("Searching.." + currentUrl)
+                    if (currentNode.text_content) {
+                        // console.log("Ahoy, text content. \n" + currentNode.text_content)
+
+                        my_text_content = currentNode.text_content.replace(/_/g, " ").toLowerCase()
+                        my_query = query.replace(/"/g, "").toLowerCase()
+                        ind = my_text_content.indexOf(my_query)
+                        // print (ind, my_text_content.length)
+                        
+                        if (ind != -1) {
+                            
+                            my_highlight = highlightText(query, extractContextAroundIndex(currentNode.text_content, ind, 120));
+                            // currentNode.isActive = true
+                            results.push({ node: currentNode, context: my_highlight});
+                            
+                            
+                            // console.log(series.data.find((n) => n.name == currentNode.name);
+                            // find(series)
+                            // n.isActive = true
+                            // series.selectDataItem(currentNode)
+                            // currentNode.data.setIndex(1, {
+                            //     category: "Marketing",
+                            //     value: 1000
+                            // });
+
+                            console.log("Found one.")
+                        }
+                        // else {
+                        //    console.log(my_query)
+                        // console.log(my_text_content)
+
+                        // }
+                    }
+
+                    if (currentNode.children) {
+                        // console.log(currentNode.children.length + " kids.")
+                        for (var i = 0; i < currentNode.children.length; i++) {
+                            // if (currentNode.children[i].children)
+                            // console.log("Index: " + i)
+                            var child = currentNode.children[i];
+                            queue.push({ node: child, context: ""});
+                        }
+                        // console.log("Still Searching..")
+                    }
+                }
+            }
+            console.log("Finished Searching.")
+            return results;
+        }
+
+
+        function search(myseries) {
+            var query = document.getElementById("searchInput").value;
+            var results = [];
+            // console.log("Series")
+            // console.log(myseries)
+            results = bfsSearch(myseries, query);
+            // console.log(results[0])
+            // console.log(results[1])
+            if (results.length > 0) {
+                var searchResultsHTML = "";
+                for (var i = 0; i < results.length; i++) {
+                    var result = results[i];
+                    if (result && result.node.url) {
+                        searchResultsHTML += "<p><a href='" + result.node.url + "'>" + result.node.name + "</a></p>";
+                        if (result.context) {
+                            // Add line breaks for spacing
+                            searchResultsHTML += result.context;
+                            searchResultsHTML += "<br><br>";
+                        }
+                        console.log("Updating result..");
+                    }
+                }
+                document.getElementById("searchResults").innerHTML = searchResultsHTML;
+            } else {
+                document.getElementById("searchResults").innerHTML = "<p>No results found.</p>";
+            }
+
+            console.log("Search results should be displayed.")
+        }
+        console.log("DT's:")
+        console.log(series.dataItems)
+        
+        // Enable zooming with the scroll wheel
+                // Enable zooming with the scroll wheel
+        // root.scrollbarX = am5.Scrollbar.new(root, { orientation: "horizontal" });
+        // root.scrollbarY = am5.Scrollbar.new(root, { orientation: "vertical" });
+
+        // // Set the zoom behavior for the series
+        // root.scrollbarX.wheelXBehavior = "zoomX";
+        // root.scrollbarY.wheelYBehavior = "zoomY";
+        // root.render()
+        
+
+        series.selectDataItem(series._dataItems[0].dataContext);
+        series.appear(1000, 100);
+    </script>
+
+</html>

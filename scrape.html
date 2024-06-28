@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagram</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="scrape.css" />
+    <style>
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+
+        }
+        .sub-container {
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: column;
+            width: 60%;
+        }
+        .search-container {
+            flex: 1;
+            display: flex;
+            padding: 10px;
+            flex-direction: column;
+        }
+        #searchInput {
+            margin-bottom: 10px;
+            width: 260px;
+        }
+        #chartdiv {
+            flex: 1;
+            width: 100%;
+           
+        }
+        #preview {
+            width: 100%;
+        }
+        #searchButton {
+            width: 130px;
+        }
+        #searchResults {
+            flex: 1;
+        }
+
+        .highlighted {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sub-container">
+            <svg id="chartdiv"></svg>
+            <div id="preview"></div>
+        </div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search...">
+            <button id="searchButton">Search</button>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+    <script>
+        const width = 800;
+        const height = 400;
+        
+        const svg = d3.select("#chartdiv")
+            .attr("width", width)
+            .attr("height", height);    
+
+        const zoomGroup = svg.append("g").attr("id", "zoom-group"); // Append 'zoomGroup' to 'svg'
+        const clipGroup = zoomGroup.append("g").attr("id", "clip-group"); // Append 'clipGroup' to 'zoomGroup'
+        
+
+        let zoom = d3.zoom()
+            .scaleExtent([-2, 2])
+            // .translateExtent([[0, 0], [width*2, height*2]])
+            .on('zoom', handleZoom);
+
+        // Create a clipPath element and assign it an ID
+        const clipPath = clipGroup.append("clipPath") //change back to w/e but the default was svg
+            .attr("id", "viewport-clip");
+
+        // Create a rectangle that defines the clipping area
+        clipPath.append("rect")
+            .attr("width", width)
+            .attr("height", height);
+
+
+        // Apply zoom to 'zoomGroup' instead of 'svg' > we can't because then zoom/pan only works when hovered over text
+        svg.call(zoom);
+
+        // Modify handleZoom function
+        function handleZoom(e) {
+            myGroup = clipGroup
+
+
+            myGroup.attr('transform', e.transform); // pan
+            
+            const zoomSpeed = 1.15; // Adjust the zoom speed factor as needed
+            
+            const { x, y, k } = e.transform;
+            // console.log(x, y, k)
+            
+            myGroup.selectAll(".link")
+                .attr("d", d => {
+                    return `M${d.source.x * k * zoomSpeed},${d.source.y * k * zoomSpeed} L${d.target.x * k * zoomSpeed},${d.target.y * k * zoomSpeed}`;
+                });
+
+            myGroup.selectAll(".node")
+                .attr("transform", d => `translate(${d.x*k* zoomSpeed},${d.y*k* zoomSpeed})`);
+        }
+
+        
+        let root;
+        // Load your JSON data and create the tree
+        d3.json("all_page_data.json").then(data => {
+            root = d3.hierarchy(data);
+
+            var nodeHeight = 70;
+            var horizontalSeparationBetweenNodes = 32;
+            var verticalSeparationBetweenNodes = 5;
+            var nodeWidth = 70;
+
+            var tree = d3.tree()
+                .nodeSize([nodeWidth + horizontalSeparationBetweenNodes, nodeHeight + verticalSeparationBetweenNodes])
+                .separation(function(a, b) {
+                    return a.parent == b.parent ? 1 : 1.25;
+                });
+            // Generate tree layout
+            tree(root);
+
+            // Create links (edges)
+            const links = root.links();
+
+            // Create links
+            clipGroup.selectAll(".link") 
+                .data(links)
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d => {
+                    return `M${d.source.x},${d.source.y} L${d.target.x},${d.target.y}`;
+                })
+                .style("stroke", "grey")
+                .style("stroke-width", 1);
+            
+
+
+            // Create nodes (circles and text)
+            const nodes = clipGroup.selectAll(".node") 
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            nodes.append("circle")
+                .attr("r", 3);
+
+
+            nodes.append("text")
+                .attr("dy", ".31em")
+                .attr("x", 10)
+                .attr("text-anchor", "start")
+                .style("font-size", "15px")
+                .attr("transform", "rotate(-90)") 
+                .append("textPath")
+                .attr("xlink:href", (d, i) => `#textpath-${i}`)
+                .text(d =>  d.data.name.split('/').pop());
+
+
+            nodes.append("defs").html(function(d, i) {
+                const circleRadius = 20
+                return `
+                    <path id="textpath-${i}" d="M0 ${-circleRadius} a${circleRadius} ${circleRadius} 0 1,1 0 ${2 * circleRadius}"/>
+                `;
+
+            });
+        });
+
+
+
+        // textElements.attr("transform", `rotate(${widestRotationAngle}, 0, 0)`);    
+        
+        // console.log(textElements)
+        ///<------------------------------v Search Code v----------------------------------->
+        var searchButton = document.getElementById("searchButton");
+
+        searchButton.addEventListener("click", function (event) {
+            search(root);
+            event.preventDefault();
+        });
+
+        var searchInput = document.getElementById("searchInput");
+
+        searchInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                search(root);
+                event.preventDefault();
+            }
+        });
+
+        function extractContextAroundIndex(text, index, maxLength) {
+            const start = Math.max(0, index - maxLength);
+            const end = Math.min(text.length, index + maxLength + 1);
+            return text.substring(start, end);
+        }
+
+        function highlightText(text, target) {
+            const content = target;
+            const regex = new RegExp(`(${text})`, 'gi');
+            my_content = content.replace(regex, '<span class="highlighted">$1</span>');
+            if (my_content != -1) {
+                return my_content;
+            } else {
+                return text;
+            }
+        }
+
+        function bfsSearch(node, query, svg) {
+            var queue = [];
+            var results = [];
+
+            queue.push({ node: node });
+            while (queue.length > 0) {
+                var current = queue.shift();
+                var currentNode = current.node;
+
+                if (currentNode) {
+                    if (currentNode.data.text_content) {
+                        my_text_content = currentNode.data.text_content.replace(/_/g, " ").toLowerCase()
+                        my_query = query.replace(/"/g, "").toLowerCase()
+                        ind = my_text_content.indexOf(my_query);
+                        if (ind != -1) {
+                            my_highlight = highlightText(query, extractContextAroundIndex(currentNode.data.text_content, ind, 120));
+                            results.push({ node: currentNode, context: my_highlight });
+                            selectedNode = d3.select(`.node[data-name="${currentNode.data.name}"]`); 
+                            selectedNode.select("circle")
+                                .style("fill", "green")
+                                .attr("r", 100);
+                        }
+                    }
+
+                    if (currentNode.children) {
+                        for (var i = 0; i < currentNode.children.length; i++) {
+                            var child = currentNode.children[i];
+                            queue.push({ node: child, context: "" });
+                        }
+                    }
+                }
+            }
+            return results;
+        }
+
+        function search(myseries) {
+            var query = document.getElementById("searchInput").value;
+            var results = [];
+            results = bfsSearch(myseries, query);
+            if (results.length > 0) {
+                var searchResultsHTML = "";
+                for (var i = 0; i < results.length; i++) {
+                    var result = results[i];
+                    if (result && result.node.data.url) {
+                        searchResultsHTML += "<p><a href='" + result.node.data.url + "'>" + result.node.data.name + "</a></p>";
+                        if (result.context) {
+                            searchResultsHTML += result.context;
+                            searchResultsHTML += "<br><br>";
+                        }
+                    }
+                }
+                document.getElementById("searchResults").innerHTML = searchResultsHTML;
+                document.getElementById("preview").innerHTML = result.node.data.text_content
+            } else {
+                document.getElementById("searchResults").innerHTML = "<p>No results found.</p>";
+            }
+        }
+
+
+            
+        
+    </script>
+</body>
+</html>

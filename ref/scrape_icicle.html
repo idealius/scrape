@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagram</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="scrape.css" />
+    <style>
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+
+        }
+        .sub-container {
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: column;
+            width: 100%;
+        }
+        .search-container {
+            flex: 1;
+            display: flex;
+            padding: 10px;
+            flex-direction: column;
+        }
+        #searchInput {
+            margin-bottom: 10px;
+            width: 260px;
+        }
+        #chartdiv {
+            flex: 1;
+            width: 100%;
+           
+        }
+        #preview {
+            width: 100%;
+        }
+        #searchButton {
+            width: 130px;
+        }
+        #searchResults {
+            flex: 1;
+        }
+
+        .highlighted {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sub-container"> <!--the chart and the text preview live in the same div-->
+            <svg id="chartdiv"></svg>
+            <div id="preview"></div>
+        </div>
+        <div class="search-container"> <!--...while the search button and results live in the same div-->
+            <input type="text" id="searchInput" placeholder="Search...">
+            <button id="searchButton">Search</button>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+    <script>
+        
+        let root;
+        // Load your JSON data and create the tree
+        d3.json("all_page_data_s.json").then(data => {
+   
+            
+            const width = 800;
+            const height = 800;
+            
+        
+            // Create the color scale.
+            const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, data.children.length + 1));
+
+            // Compute the layout.
+            const hierarchy = d3.hierarchy(data)
+                .sum(d => d.value)
+                .sort((a, b) => b.height - a.height || b.value - a.value);
+            const root = d3.partition()
+                .size([height, (hierarchy.height + 1) * width / 3])
+                (hierarchy);
+
+            // Create the SVG container.
+            const svg = d3.select("#chartdiv")
+            // const svg = d3.create("svg")
+                .attr("viewBox", [0, 0, width, height])
+                .attr("width", width)
+                .attr("height", height)
+                .attr("style", "max-width: 100%; height: auto; font: 18px sans-serif;");
+
+            // Append cells.
+            const cell = svg
+                .selectAll("g")
+                .data(root.descendants())
+                .join("g")
+                .attr("transform", d => `translate(${d.y0},${d.x0})`);
+
+           
+            const text = cell.append("text")
+                .style("user-select", "none")
+                .attr("pointer-events", "none")
+                .attr("width", width)
+                .attr("x", 4)
+                .attr("y", 13)
+                .attr("fill-opacity", d => +labelVisible(d));
+
+            var insertLinebreaks = function (t, h, width) {
+                var el = d3.select(t);
+                var div = d3.select(t.parentNode);
+                div.append("foreignObject")
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr("width", width)
+                    .attr("height", 200)
+                    .append("xhtml:div")
+                    .attr('style','word-wrap:break-word; text-align:left;')
+                    .html(h);
+                    // .html(t.data.text_content);
+                el.remove();
+            };
+
+            text.append("tspan")
+                .text(d => d.data.name.split('/').pop())
+            
+            text.each(function(d) { insertLinebreaks(this, d.data.name.split('/').pop() + "<br><br>" + d.data.text_content, d.y1 - d.y0 - 1); });
+
+            const rect = cell.append("rect")
+                .attr("width", d => d.y1 - d.y0 - 1)
+                .attr("height", d => rectHeight(d))
+                .attr("fill-opacity", 0.6)
+                .attr("fill", d => {
+                    if (!d.depth) return "#ccc";
+                    while (d.depth > 1) d = d.parent;
+                    return color(d.data.name);
+                })
+                .style("cursor", "pointer")
+                .on("click", clicked);
+
+
+            const format = d3.format(",d");
+            const tspan = text.append("tspan")
+                .attr("fill-opacity", d => labelVisible(d) * 0.7)
+                .text(d => ` ${format(d.data.text_content)}`);
+
+            cell.append("title")
+            
+                .text(d => `${d => d.data.name.split('/').pop()}\n${format(d.data.text_content)}`);
+
+            // On click, change the focus and transitions it into view.
+            let focus = root;
+            function clicked(event, p) {
+                focus = focus === p ? p = p.parent : p;
+
+                root.each(d => d.target = {
+                    x0: (d.x0 - p.x0) / (p.x1 - p.x0) * height,
+                    x1: (d.x1 - p.x0) / (p.x1 - p.x0) * height,
+                    y0: d.y0 - p.y0,
+                    y1: d.y1 - p.y0
+                });
+
+                const t = cell.transition().duration(750)
+                    .attr("transform", d => `translate(${d.target.y0},${d.target.x0})`);
+
+                rect.transition(t).attr("height", d => rectHeight(d.target));
+                text.transition(t).attr("fill-opacity", d => +labelVisible(d.target));
+                tspan.transition(t).attr("fill-opacity", d => labelVisible(d.target) * 0.7);
+            }
+            
+            function rectHeight(d) {
+                return d.x1 - d.x0 - Math.min(1, (d.x1 - d.x0) / 2);
+            }
+
+            function labelVisible(d) {
+                return d.y1 <= width && d.y0 >= 0 && d.x1 - d.x0 > 16;
+            }
+            
+            console.log(data)
+
+            // return svg.node();
+
+        });
+
+
+
+        // textElements.attr("transform", `rotate(${widestRotationAngle}, 0, 0)`);    
+        
+        // console.log(textElements)
+        ///<------------------------------v Search Code v----------------------------------->
+        var searchButton = document.getElementById("searchButton");
+
+        searchButton.addEventListener("click", function (event) {
+            search(root);
+            event.preventDefault();
+        });
+
+        var searchInput = document.getElementById("searchInput");
+
+        searchInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                search(root);
+                event.preventDefault();
+            }
+        });
+
+        function extractContextAroundIndex(text, index, maxLength) {
+            const start = Math.max(0, index - maxLength);
+            const end = Math.min(text.length, index + maxLength + 1);
+            return text.substring(start, end);
+        }
+
+        function highlightText(text, target) {
+            const content = target;
+            const regex = new RegExp(`(${text})`, 'gi');
+            my_content = content.replace(regex, '<span class="highlighted">$1</span>');
+            if (my_content != -1) {
+                return my_content;
+            } else {
+                return text;
+            }
+        }
+
+        function bfsSearch(node, query, svg) {
+            var queue = [];
+            var results = [];
+
+            queue.push({ node: node });
+            while (queue.length > 0) {
+                var current = queue.shift();
+                var currentNode = current.node;
+
+                if (currentNode) {
+                    if (currentNode.data.text_content) {
+                        my_text_content = currentNode.data.text_content.replace(/_/g, " ").toLowerCase()
+                        my_query = query.replace(/"/g, "").toLowerCase()
+                        ind = my_text_content.indexOf(my_query);
+                        if (ind != -1) {
+                            my_highlight = highlightText(query, extractContextAroundIndex(currentNode.data.text_content, ind, 120));
+                            results.push({ node: currentNode, context: my_highlight });
+                            selectedNode = d3.select(`.node[data-name="${currentNode.data.name}"]`); 
+                            selectedNode.select("circle")
+                                .style("fill", "green")
+                                .attr("r", 100);
+                        }
+                    }
+
+                    if (currentNode.children) {
+                        for (var i = 0; i < currentNode.children.length; i++) {
+                            var child = currentNode.children[i];
+                            queue.push({ node: child, context: "" });
+                        }
+                    }
+                }
+            }
+            return results;
+        }
+
+        function search(myseries) {
+            var query = document.getElementById("searchInput").value;
+            var results = [];
+            results = bfsSearch(myseries, query);
+            if (results.length > 0) {
+                var searchResultsHTML = "";
+                for (var i = 0; i < results.length; i++) {
+                    var result = results[i];
+                    if (result && result.node.data.url) {
+                        searchResultsHTML += "<p><a href='" + result.node.data.url + "'>" + result.node.data.name + "</a></p>";
+                        if (result.context) {
+                            searchResultsHTML += result.context;
+                            searchResultsHTML += "<br><br>";
+                        }
+                    }
+                }
+                document.getElementById("searchResults").innerHTML = searchResultsHTML;
+                document.getElementById("preview").innerHTML = result.node.data.text_content
+            } else {
+                document.getElementById("searchResults").innerHTML = "<p>No results found.</p>";
+            }
+        }
+
+
+            
+        
+    </script>
+</body>
+</html>

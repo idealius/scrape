@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>AmCharts Voronoi Treemap</title>
+        <!-- <script src="https://cdn.amcharts.com/lib/5/amcharts.js"></script>
+        <script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+        <script src="https://cdn.amcharts.com/lib/5/themes/animated.js"></script>
+        <script src="https://cdn.amcharts.com/lib/5/plugins/zoom.js"></script> -->
+        <script src="amcharts5/index.js"></script>
+        <script src="amcharts5/xy.js"></script>
+        <script src="amcharts5/hierarchy.js"></script>
+        <script src="amcharts5/themes/Animated.js"></script>
+        <link rel="stylesheet" type="text/css" href="scrape.css" />
+    </head>
+    <body>
+    <div id="chartdiv" style="width: 100%; height: 600px;"></div>
+    <script>
+        // Create root element
+        var root = am5.Root.new("chartdiv");
+
+
+        // Set themes
+        // https://www.amcharts.com/docs/v5/concepts/themes/
+        root.setThemes([
+        am5themes_Animated.new(root)
+        ]);
+
+
+        // Create wrapper container
+        var container = root.container.children.push(am5.Container.new(root, {
+            width: am5.percent(100),
+            height: am5.percent(100),
+            layout: root.verticalLayout
+        }));
+
+
+        // Create series
+        // https://www.amcharts.com/docs/v5/charts/hierarchy/#Adding
+        var series = container.children.push(am5hierarchy.Tree.new(root, {
+            // tooltip: am5.Tooltip.new(root, {
+            //     labelText: "[bold]{name}[/]\n{value}"
+            // }),
+            singleBranchOnly: false,
+            downDepth: 1,
+            initialDepth: 10,
+            text_content: "text_content",
+            valueField: "value",
+            categoryField: "name",
+            childDataField: "children"
+        }));
+
+
+
+        // Set data
+        // https://www.amcharts.com/docs/v5/charts/hierarchy/#Setting_data
+        //am5.net.load("all_page_data.json")
+        //series.data.setAll([data]);
+        am5.net.load("all_page_data.json").then(function(result) {
+            data = am5.JSONParser.parse(result.response)
+            res = series.data.setAll([data]);
+            console.log(res)
+            // This gets executed when data finishes loading
+            // myparse = am5.JSONParser.parse(result.response, {
+            //     valueField: "text_content",
+            //     categoryField: "name",
+            //     childDataField: "children",
+            // })
+            
+        }).catch(function(result) {
+            // This gets executed if there was an error loading URL
+            // ... handle error
+            console.log("Error loading " + result.xhr.responseURL);
+        });
+       
+        // Select root node
+        // https://www.amcharts.com/docs/v5/charts/hierarchy/#Pre_selected_branch
+        //series.set("selectedDataItem", series.dataItems[1]);
+        console.log(series)
+
+
+        // Make stuff animate on load
+        series.appear(1000, 100);
+    </script>
+</body>
+</html>
