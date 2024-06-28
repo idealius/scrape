@@ -87,3 +87,5 @@ urls_crawled*.json
 urls_problematic.json
 urls_queue*.json
 data*.json```
+
+Use for commercial reasons or use for private reasons at your own risk keeping in mind the licenses of the imported libraries (Beautiful Soup, colorama, etc.)
