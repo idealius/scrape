@@ -63,7 +63,7 @@ You will need to do a find > replace in a text editor and replace "false" 's wit
 
 Now edit the scrape.py section in question pasting over the cookie there presently, from '[' to ']'.
 
-Still within scrape.py change the ```my_start_url``` to the parent page you want to start crawling at.
+Still within scrape.py change the ```my_start_url``` to the parent page you want to start crawling at. It's best practice to just make this the domain and put the actual start page in the ```allow_list``` below.
 Add and remove items from the ```name_blacklist``` & ```phrase_blacklist```. Phrase blacklist is based on text on the page, name blacklist is based on the URL or the title of the page if I recall correctly.
 
 The ```allow_list``` should be the folders (full url starting at https://...) of the website you would like to crawl. So, it does need to be edited, but if you want to crawl the entire site (unlikely) you can just copy ```my_start_url``` to it. 
