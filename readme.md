@@ -1,4 +1,4 @@
-I wasn't able to find a free scraping utility online, so I made one in python.
+I wasn't able to find a free, crawling, website scraping utility online, so I made one in python.
 
 This program does not use the sitemap at all, except to consider it another page to grab links from if an HTML version of it exists in the hierarchy of the HTML pages, themselves. I don't find sitemaps to be particularly compelling for a starting point to scrape, but it might be good to check a site's sitemap to understand what folders to look at and input into this program.
 
