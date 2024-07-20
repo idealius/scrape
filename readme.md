@@ -83,6 +83,7 @@ You'll have to disable CORS in Chrome somehow. (E.g. To use it to load a local f
 
 # How-to
 
+This is designed for crawling websites you have to login to. So, we'll need the cookie first.
 Get the ```editthiscookie``` extension from chrome extension store
 Navigate to the site you want to scrape
 Click its icon in the upper right after ensuring its pinned in your managed extensions
